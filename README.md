@@ -29,25 +29,27 @@ contar a quantidade total de k-cliques em G. O pseudocódigo abaixo (estilo Pyth
 algoritmo genérico para a contagem de k-cliques em um grafo G conexo e não direcionado,
 utilizando a abordagem BFS (Breadth-First Search).
 
-def contagem_de_cliques_serial(g:Grafo, k:int):
-
-cliques = []
-for each v in g.V(G):
-cliques.append([v])
-contador = 0
-while not empty cliques:
-clique = cliques.pop()
-// A clique atual já tem k vértices
-if(len(clique) == k):
-contador+=1
-continue
-ultimo_vertice = clique[len(clique)-1]
-for each vertice in clique:
-for each vizinho in (adjacência de vertice):
-if (vizinho not in clique) and
-(vizinho se conecta a todos os vértices de clique) and
-(vizinho > ultimo_vertice):
-nova_clique = clique.clone()
-nova_clique.append(vizinho)
-cliques.push(nova_clique)
-return contador
+    def contagem_de_cliques_serial(g:Grafo, k:int):
+        cliques = []
+            for each v in g.V(G):
+                cliques.append([v])
+        
+            contador = 0
+            while not empty cliques:
+                clique = cliques.pop()
+                
+                // A clique atual já tem k vértices
+                if(len(clique) == k):
+                    contador+=1
+                    continue
+                
+                ultimo_vertice = clique[len(clique)-1]
+                for each vertice in clique:
+                    for each vizinho in (adjacência de vertice):
+                        if (vizinho not in clique) and
+                        (vizinho se conecta a todos os vértices de clique) and
+                        (vizinho > ultimo_vertice):
+                            nova_clique = clique.clone()
+                            nova_clique.append(vizinho)
+                            cliques.push(nova_clique)
+        return contador
