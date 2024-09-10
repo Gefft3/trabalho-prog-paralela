@@ -54,6 +54,47 @@ utilizando a abordagem BFS (Breadth-First Search).
                             cliques.push(nova_clique)
         return contador
 
+Algoritmo 1. Contagem de cliques serial.
+
+As linhas 2-4 constroem o conjunto de cliques visitadas pelo algoritmo, que é composto
+inicialmente por todos os vértices do grafo (dado que um subgrafo composto por apenas um vértice
+é uma clique). Enquanto o conjunto de cliques visitadas não for vazio (linha 7), uma clique é
+extraída do conjunto (linha 8). Caso essa clique extraída já tenha a quantidade de vértices k, a
+contagem de cliques é incrementada (linha 12) e o algoritmo continua a busca por uma próxima
+clique. Caso essa clique tenha menos que k vértices, o algoritmo explora as vizinhanças dos vértices da clique atual (linhas 16 e 17) e tenta criar uma clique maior (linhas 18-23). Caso haja um vértice novo que não faça parte da clique atual (linha 18) e que, ao ser inserido na clique atual gera uma clique maior (linha 19), o algoritmo aumenta a clique atual (linhas 21-22) e insere essa nova clique no conjunto de cliques a serem visitadas (linha 23). A linha 20 é uma condição necessária para que não sejam geradas cliques repetitivas durante a visitação.
+
+## Métodos 
+
+    def contagem_de_cliques_paralela1(g:Grafo, k:int, t:int):
+        cliques = []
+        for each v in g.V(G):
+            cliques.append([v])
+
+        trabalhos_threads = divida vetor cliques em t conjuntos do mesmo tamanho
+
+        Crie t threads com o seguinte código:
+            contador = 0
+            cliques = trabalhos_threads[tid]
+            while not empty cliques:
+                clique = cliques.pop()
+                
+                // A clique atual já tem k vértices
+                if(len(clique) == k):
+                    contador+=1
+                    continue
+ 
+                ultimo_vertice = clique[len(clique)-1]
+                for each vertice in clique:
+                    for each vizinho in (adjacência de vertice):
+                        if (vizinho not in clique) and
+                        (vizinho se conecta a todos os vértices de clique) and
+                        (vizinho > ultimo_vertice):
+                            nova_clique = clique.clone()
+                            nova_clique.append(vizinho)
+                            cliques.push(nova_clique)   
+        return contador
+
+
 Algoritmo 2. Contagem de cliques paralela com divisão de trabalho fixa.
 
 O principal problema do Algoritmo 2 é que a divisão de trabalho fixa entre as threads pode
