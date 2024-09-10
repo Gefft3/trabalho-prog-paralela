@@ -154,8 +154,9 @@ Neste trabalho você deve implementar e entregar os seguintes artefatos:
 3 em relação à corretude da quantidade de cliques geradas considerando os seguintes
 datasets:</li>
 
-![alt text](image.png)
-    <li>Descrição textual da estratégia adotada no Algoritmo 3 para escolher qual a thread que terá
+![image](https://github.com/user-attachments/assets/ae023850-97c3-4fb4-ba12-30a946f1a909)
+
+<li>Descrição textual da estratégia adotada no Algoritmo 3 para escolher qual a thread que terá
 suas tarefas “roubadas”;</li>
     <li>Análise dos tempos de execução dos Algoritmos 1, 2 e 3. Nessa análise você deve medir
 apenas o tempo de execução gasto para a geração das contagens de cliques, e não o tempo
