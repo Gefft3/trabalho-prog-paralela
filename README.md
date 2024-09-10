@@ -93,3 +93,42 @@ parametrizado. Essa versão está representada no Algoritmo 3.
                 if empty cliques:
                     cliques = r cliques “roubadas” de outra thread
         return contador
+
+Algoritmo 3. Contagem de cliques paralela com divisão de trabalho fixa e
+balanceamento de carga
+
+Note que, no Algoritmo 3, quando uma thread fica sem trabalho a realizar (linha 28), ela
+acessa o conjunto de trabalhos de uma outra thread e “rouba” um conjunto de r trabalhos. Os
+critérios utilizados para escolher qual(is) thread(s) terá(ão) seus trabalhos “roubados” ficam à sua escolha. Não se esqueça de utilizar um mecanismo de sincronização durante o acesso às tarefas de outra thread.
+
+## Requisitos de Entrega
+
+Neste trabalho você deve implementar e entregar os seguintes artefatos:
+
+<ol>
+    <li>Implementação do algoritmo 1</li>
+    <li>Implementação do algoritmo 2</li>
+    <li>Implementação do algoritmo 3</li>
+    <li>Conferência de todos os resultados produzidos pelas implementações dos Algoritmos 1, 2 e
+3 em relação à corretude da quantidade de cliques geradas considerando os seguintes
+datasets:</li>
+
+![alt text](image.png)
+    <li>Descrição textual da estratégia adotada no Algoritmo 3 para escolher qual a thread que terá
+suas tarefas “roubadas”;</li>
+    <li>Análise dos tempos de execução dos Algoritmos 1, 2 e 3. Nessa análise você deve medir
+apenas o tempo de execução gasto para a geração das contagens de cliques, e não o tempo
+total de execução do arquivo executável correspondente ao Algoritmo. Você deve variar o
+tamanho das cliques buscadas até que o programa chegue à um tempo de execução máximo
+de 4 horas. </li>
+    <li>Em relação à sua implementação do Algoritmo 3, você deve também prover uma análise
+experimental variando o valor de r. Nesse experimento você deve tentar encontrar o ponto
+em que o valor de r deixa de prover ganhos de desempenho;</li>
+    <li>Arquivo .zip contendo todos os códigos implementados (itens 1, 2, 3 e 4);</li>
+    <li>Relatório em PDF contemplando os itens 5, 6, 7, 8 e 9.</li>
+</ol>
+
+## Entrega
+
+Todos os artefatos descritos no item anterior devem ser entregues até o dia 01 de Setembro
+de 2024, via AVA.
