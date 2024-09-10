@@ -1,9 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
-#include <vector>
-
-
+#include <map>
 
 using namespace std;
 
@@ -14,7 +12,7 @@ typedef struct {
     int *countersPerVertex;
 
     void initialize(const char* graphDataset) {
-        FILE* fp = fopen("./datasets/citeseer.edgelist", "r");
+        FILE* fp = fopen("teste.txt", "r");
         int src, dst;
         int maxVertexId = -1;
         while(fscanf(fp, "%d %d", &src, &dst) != EOF) {
@@ -71,57 +69,33 @@ typedef struct {
     }
 } Graph;
 
+void renomearVertices(Graph *graph) {
+    map<int, int> vertexMap;
+    int newVertexId = 0;
 
-    
-
-int contagem_cliques_serial(Graph graph, int k){
-    
-    vector<std::vector<int>> cliques;
-
-    for (int v = 0; v < graph.getVertices(); v++) {
-        vector<int> clique;
-        clique.push_back(v);
-        cliques.push_back(clique);
+    for (int i = 0; i < graph->getVertices(); i++) {
+        vertexMap[i] = newVertexId++;
     }
 
-    int count = 0;
-
-    while (cliques.size() > 0) {
-        vector<int> clique = cliques.back();
-        cliques.pop_back();
-
-        if (clique.size() == k) {
-            count++;
-            continue;
-        }
-
-        for (int v = clique.back() + 1; v < graph.getVertices(); v++) {
-            bool isClique = true;
-            for (int i = 0; i < clique.size(); i++) {
-                if (!graph.isNeighbour(v, clique[i])) {
-                    isClique = false;
-                    break;
-                }
-            }
-
-            if (isClique) {
-                vector<int> newClique = clique;
-                newClique.push_back(v);
-                cliques.push_back(newClique);
-            }
+    for (int i = 0; i < graph->getVertices(); i++) {
+        for (int j = 0; j < graph->getEdgelistSize(i); j++) {
+            int oldSrc = i;
+            int oldDst = graph->getEdge(i, j);
+            int newSrc = vertexMap[oldSrc];
+            int newDst = vertexMap[oldDst];
+            graph->addEdge(newSrc, newDst);
         }
     }
-
-    return count;
 }
 
 
-
 int main() {
-    Graph* graph = new Graph;
-    graph->initialize("./datasets/citeseer.edgelist");
 
-    FILE* fp = fopen("./datasets/citeseer.edgelist", "r");
+
+    Graph* graph = new Graph;
+    graph->initialize("teste.txt");
+
+    FILE* fp = fopen("teste.txt", "r");
 
     int src, dst;
     while(fscanf(fp, "%d %d", &src, &dst) != EOF) {       
@@ -129,12 +103,16 @@ int main() {
     }
 
     fclose(fp);
+    renomearVertices(graph);
 
-    int cliques = 0;
 
-    cliques = contagem_cliques_serial(*graph, 3);
+    printf("Vertices: %d\n", graph->getVertices());
 
-    printf("Cliques: %d\n", cliques);  
+    for(int i = 0 ; i < graph->getVertices() ; i++) {
+        for(int j = 0 ; j < graph->getEdgelistSize(i) ; j++) {
+            printf("%d %d\n", i, graph->getEdge(i, j));
+        }
+    }
 
     graph->release();
 
