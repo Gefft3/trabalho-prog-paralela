@@ -5,6 +5,7 @@
 #include <thread>
 #include <map>
 #include <vector>
+#include "sort.h"
 
 using namespace std;
 
@@ -148,10 +149,9 @@ vector<pair<int, int>> rename(const string& dataset) {
 
 int main(){
 
-
     string dataset = "teste"; 
 
-    vector<pair<int, int>> edges = rename(dataset);
+    vector<pair<int, int>> edges = sort(dataset);
 
     graph* g = new graph(edges);
     

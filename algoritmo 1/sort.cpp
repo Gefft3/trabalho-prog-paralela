@@ -34,18 +34,7 @@ vector<pair<int, int>> sort(const string& inputFileName) {
     inputFile.close();
 
 
-    cout << "O grafo foi renomeado com sucesso! Arquivo de saída: " << endl;
+    cout << "O grafo foi renomeado com sucesso!" << endl;
 
     return edges;
-}
-
-int main(){
-    string dataset = "teste"; 
-    vector<pair<int, int>> edges = sort(dataset);
-    
-    for(auto edge : edges){
-        cout << edge.first << " " << edge.second << endl;
-    }
-
-    return 0;
 }
