@@ -1,4 +1,5 @@
 // Grafo de exemplo do professor
+// Grafo orientado e com bugs
 
 #include <stdio.h>
 #include <stdlib.h>
