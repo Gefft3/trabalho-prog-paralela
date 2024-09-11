@@ -1,20 +1,27 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <cstring>
-#include <map>
-
-using namespace std;
 
 typedef struct {
-    int *edgelistSize;
-    int** edgelist;
-    int vertices;
-    int *countersPerVertex;
 
+    int* edgelistSize; // Um ponteiro para um array que armazena o número de arestas (vizinhos) para cada vértice.
+    int** edgelist; //Um ponteiro para um array de ponteiros, onde cada ponteiro armazena um array de vértices adjacentes (arestas) para um dado vértice.   
+    int vertices;
+    int* countersPerVertex; // Um ponteiro para um array que armazena o número de arestas (vizinhos) para cada vértice.
+
+    // Initialize the graph
     void initialize(const char* graphDataset) {
-        FILE* fp = fopen("teste.txt", "r");
         int src, dst;
         int maxVertexId = -1;
+        
+        FILE* fp = fopen("teste", "r");
+        
+        if(fp == NULL || !fp) {
+            printf("Error: Unable to open the file\n");
+            exit(1);
+        }
+
+        // Get the number of vertices
         while(fscanf(fp, "%d %d", &src, &dst) != EOF) {
             if(src > maxVertexId)
                 maxVertexId = src;
@@ -23,7 +30,10 @@ typedef struct {
         }
         vertices = maxVertexId+1;    
 
+        // Rewind the file pointer
         rewind(fp);
+
+        // Initialize the edgelistSize array
         edgelistSize = (int*)malloc(vertices*sizeof(int));
         while(fscanf(fp, "%d %d", &src, &dst) != EOF) {
             edgelistSize[src]++;
@@ -34,11 +44,22 @@ typedef struct {
         for(int i = 0 ; i < vertices ; i++) {
             edgelist[i] = (int*)malloc(edgelistSize[i] * sizeof(int));
         }
-
+        // Initialize the countersPerVertex
         countersPerVertex = (int*)malloc(vertices*sizeof(int));
         memset(countersPerVertex, 0, vertices*sizeof(int));
 
         rewind(fp);
+    }
+
+    void infos(){
+        printf("Vertices: %d\n", vertices);
+        
+        printf("EdgelistSize: %n\n", edgelistSize);
+        for(int i = 0 ; i < vertices ; i++) {
+            for(int j = 0 ; j < edgelistSize[i] ; j++) {
+                printf("EdgelistSize[%d]: %d\n", i, edgelistSize[i]);
+            }
+        }
     }
 
     int getVertices() {
@@ -57,63 +78,55 @@ typedef struct {
         edgelist[src][countersPerVertex[src]++] = dst;
     }
 
-    //TODO
+    // Check if the two vertices are neighbours
     bool isNeighbour(int src, int dst) {
-        return true;
+        for(int i = 0 ; i < edgelistSize[src] ; i++) {
+            if(edgelist[src][i] == dst)
+                return true;
+        }
+        for(int i = 0 ; i < edgelistSize[dst] ; i++) {
+            if(edgelist[dst][i] == src)
+                return true;
+        }
+        return false;    
     }
+
+    // Release the memory
     void release() {
         for(int i = 0 ; i < vertices ; i++)
             free(edgelist[i]);
+        
         free(edgelist);
-        // TODO Release the other structures.
+        free(edgelistSize);
+        free(countersPerVertex);
     }
 } Graph;
 
-void renomearVertices(Graph *graph) {
-    map<int, int> vertexMap;
-    int newVertexId = 0;
-
-    for (int i = 0; i < graph->getVertices(); i++) {
-        vertexMap[i] = newVertexId++;
-    }
-
-    for (int i = 0; i < graph->getVertices(); i++) {
-        for (int j = 0; j < graph->getEdgelistSize(i); j++) {
-            int oldSrc = i;
-            int oldDst = graph->getEdge(i, j);
-            int newSrc = vertexMap[oldSrc];
-            int newDst = vertexMap[oldDst];
-            graph->addEdge(newSrc, newDst);
-        }
-    }
-}
-
-
 int main() {
-
-
     Graph* graph = new Graph;
-    graph->initialize("teste.txt");
+    graph->initialize("teste");
 
-    FILE* fp = fopen("teste.txt", "r");
+    FILE* fp = fopen("teste", "r");
 
     int src, dst;
     while(fscanf(fp, "%d %d", &src, &dst) != EOF) {       
         graph->addEdge(src,dst);        
     }
 
+    // Close the file
     fclose(fp);
-    renomearVertices(graph);
 
-
-    printf("Vertices: %d\n", graph->getVertices());
-
+    // Print the graph
     for(int i = 0 ; i < graph->getVertices() ; i++) {
         for(int j = 0 ; j < graph->getEdgelistSize(i) ; j++) {
             printf("%d %d\n", i, graph->getEdge(i, j));
         }
     }
 
+    graph->infos();
+
+
+    // Free the memory
     graph->release();
 
     return 0;
