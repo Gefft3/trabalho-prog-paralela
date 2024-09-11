@@ -2,18 +2,19 @@
 #include <fstream>
 #include <map>
 #include <vector>
+#include "sort.h"
 
 using namespace std;
 
-vector<pair<int, int>> rename(const string& dataset) {
+vector<pair<int, int>> sort(const string& inputFileName) {
     
-    ifstream inputFile(dataset);
+    ifstream inputFile(inputFileName);
     map<int, int> nodeMap;
     vector<pair<int, int>> edges;
     int nodeCounter = 1;
     
     if (!inputFile.is_open()) {
-        cerr << "Erro ao abrir o arquivo de entrada: " << dataset << endl;
+        cerr << "Erro ao abrir o arquivo de entrada: " << inputFileName << endl;
     }
 
     int u, v;
@@ -40,7 +41,7 @@ vector<pair<int, int>> rename(const string& dataset) {
 
 int main(){
     string dataset = "teste"; 
-    vector<pair<int, int>> edges = rename(dataset);
+    vector<pair<int, int>> edges = sort(dataset);
     
     for(auto edge : edges){
         cout << edge.first << " " << edge.second << endl;
