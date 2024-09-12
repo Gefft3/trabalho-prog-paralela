@@ -11,7 +11,7 @@ vector<pair<int, int>> sort(const string& inputFileName) {
     ifstream inputFile(inputFileName);
     map<int, int> nodeMap;
     vector<pair<int, int>> edges;
-    int nodeCounter = 1;
+    int nodeCounter = 0;
     
     if (!inputFile.is_open()) {
         cerr << "Erro ao abrir o arquivo de entrada: " << inputFileName << endl;
