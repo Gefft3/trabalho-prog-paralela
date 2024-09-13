@@ -6,111 +6,64 @@
 #include <map>
 #include <vector>
 #include "sort.h"
+#include <algorithm>
+#include <set>
 
 using namespace std;
 
-class graph {
-    int* edgelistSize;
-    int** edgelist;
-    int vertices;
-    int* countersPerVertex;
+class Graph {
+    public:
 
-public:
-    graph(vector<pair<int, int>> edges) {
-        int src, dst;
-        int maxVertexId = -1;
+        vector<pair<int, int>> arestas;
+        vector<set<int>> vizinhos; 
+        set<int> vertices; 
 
-        for (const auto& edge : edges) {
-            src = edge.first;
-            dst = edge.second;
-            if (src > maxVertexId)
-                maxVertexId = src;
-            if (dst > maxVertexId)
-                maxVertexId = dst;
-        }
-
-        vertices = maxVertexId + 1;
-
-        edgelistSize = (int*)malloc(vertices * sizeof(int));
-        memset(edgelistSize, 0, vertices * sizeof(int));  
-
-        for (const auto& edge : edges) {
-            src = edge.first;
-            edgelistSize[src]++;
-        }
-
-        edgelist = (int**)malloc(vertices * sizeof(int*));
-        for (int i = 0; i < vertices; i++) {
-            edgelist[i] = (int*)malloc(edgelistSize[i] * sizeof(int));
-        }
-
-        countersPerVertex = (int*)malloc(vertices * sizeof(int));
-        memset(countersPerVertex, 0, vertices * sizeof(int));
-
-        for (const auto& edge : edges) {
-            src = edge.first;
-            dst = edge.second;
-            addEdge(src, dst);  
-        }
-    }
-
-    void infos() {
-        cout << "Vertices: " << vertices << endl;
-
-        for (int i = 0; i < vertices; i++) {
-            cout << "EdgelistSize[" << i << "]: " << edgelistSize[i] << endl;
-        }
-    }
-
-    int getVertices() {
-        return vertices;
-    }
-
-    int getEdgelistSize(int src) {
-        return edgelistSize[src];
-    }
-
-    int getEdge(int src, int pos) {
-        return edgelist[src][pos];
-    }
-
-    void addEdge(int src, int dst) {
-        if (countersPerVertex[src] < edgelistSize[src]) {  
-            edgelist[src][countersPerVertex[src]++] = dst;
-        }
-
-        if (countersPerVertex[dst] < edgelistSize[dst]) { 
-            edgelist[dst][countersPerVertex[dst]++] = src;
-        }
-    }
-
-    bool isNeighbour(int src, int dst) {
-        for (int i = 0; i < edgelistSize[src]; i++) {
-            if (edgelist[src][i] == dst)
-                return true;
-        }
-        for (int i = 0; i < edgelistSize[dst]; i++) {
-            if (edgelist[dst][i] == src)
-                return true;
-        }
-        return false;
-    }
-
-    void printar_grafo() {
-        for (int i = 0; i < vertices; i++) {
-            for (int j = 0; j < edgelistSize[i]; j++) {
-                cout << i << " " << edgelist[i][j] << endl;
+        Graph(vector<pair<int, int>> edgeList) {
+            for (auto edge : edgeList) {
+                const int tamanho_vizinhos = vizinhos.size();
+                if (tamanho_vizinhos <= max(edge.first, edge.second)) {
+                    vizinhos.resize(max(edge.first, edge.second) + 1);
+                }
+                arestas.push_back(edge);
+                vertices.insert(edge.first); 
+                vertices.insert(edge.second); 
+                vizinhos[edge.first].insert(edge.second); 
+                vizinhos[edge.second].insert(edge.first); 
             }
         }
-    }
 
-    void release() {
-        for (int i = 0; i < vertices; i++)
-            free(edgelist[i]);
-        free(edgelist);
-        free(edgelistSize);
-        free(countersPerVertex);
-    }
+        int contagem_cliques_serial(int k);
+        bool esta_na_clique(int vertex, vector<int> clique);
+        bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
+        bool formar_clique(int vertex, vector<int> clique);
+
+        vector<int> getNeighbours(int vertex) {
+            vector<int> neighbours;
+            for (int neighbour : vizinhos[vertex]) {
+                neighbours.push_back(neighbour);
+            }
+            return neighbours;
+        }
+
+        bool isNeighbour(int vertex, int neighbour) {
+            return vizinhos[vertex].find(neighbour) != vizinhos[vertex].end();
+        }
+
+        void printar_grafo() {
+            for (auto v : vertices) {
+                cout << v << ": ";
+                for (auto n : vizinhos[v]) {
+                    cout << n << " ";
+                }
+                cout << endl;
+            }
+        }
+
+        void release() {
+            arestas.clear();
+            vertices.clear();
+            vizinhos.clear();
+        }
 };
 
 
@@ -137,30 +90,88 @@ vector<pair<int, int>> rename(const string& dataset) {
         edges.push_back({nodeMap[u], nodeMap[v]});
     }
 
-
     inputFile.close();
-    
-    // cout << "renomeou" << endl;
 
     return edges;
 }
 
+bool Graph::esta_na_clique(int vertex, vector<int> clique) {
+    for (size_t i = 0; i < clique.size(); i++) {
+        if (vertex == clique[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool Graph::se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique) {
+    for (int v : clique) {
+        if (!isNeighbour(vertex, v)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Graph::formar_clique(int vertex, vector<int> clique) {
+    bool cond1 = se_conecta_a_todos_os_vertices_da_clique(vertex, clique);
+    bool cond2 = esta_na_clique(vertex, clique);
+
+    cout << "Vizinho: " << vertex << endl;
+    cout << "cond1 (se conecta a todos): " << cond1 << endl;
+    cout << "cond2 (já está na clique): " << cond2 << endl;
+
+    return (cond1 && !cond2);
+}
 
 
-int main(){
 
-    string dataset = "teste"; 
+int Graph::contagem_cliques_serial(int k) {
+    vector<vector<int>> cliques;
 
-    vector<pair<int, int>> edges = sort(dataset);
+    for(auto v: vertices) {
+        cliques.push_back({v});
+    }
 
-    graph* g = new graph(edges);
+    int count = 0;
+
+    while(!cliques.empty()){
+        vector<int> clique;
+        
+        clique = cliques.back();
+        cliques.pop_back();
     
+        int tamanho_clique = clique.size();
+        if(tamanho_clique == k){
+            count++;
+            continue;
+        }
+        
+        int last_vertex = clique[clique.size() -  1];
+        
+        for(int vertice : clique){
+            vector<int> vizinhos_atual = getNeighbours(vertice); 
+            
+            for(int vizinho: vizinhos_atual){
+                if(formar_clique(vizinho, clique) && vizinho > last_vertex){
+                    vector<int> nova_clique = clique;
+                    nova_clique.push_back(vizinho);
+                    cliques.push_back(nova_clique);
+                }
+            }
+        } 
+    }
 
-    g->infos();
-    g->printar_grafo();
+    return count;
+    
+}
 
+int main() {
+    string dataset = "../datasets/citeseer.edgelist";
+    vector<pair<int, int>> edges = rename(dataset);
+    Graph* g = new Graph(edges);
+    // g->printar_grafo();
+    cout << g->contagem_cliques_serial(3) << endl;
     g->release();
     delete g;
-
-    return EXIT_SUCCESS;
 }
