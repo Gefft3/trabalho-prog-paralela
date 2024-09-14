@@ -51,11 +51,17 @@ class Graph {
 
         void printar_grafo() {
             for (auto v : vertices) {
-                cout << v << ": ";
+                //cout << v << ": ";
                 for (auto n : vizinhos[v]) {
-                    cout << n << " ";
+                    //cout << n << " ";
                 }
-                cout << endl;
+                //cout << endl;
+            }
+        }
+
+        void printar_clique(vector<int> clique) {
+            for (auto v : clique) {
+                //cout << v << " ";
             }
         }
 
@@ -117,11 +123,13 @@ bool Graph::formar_clique(int vertex, vector<int> clique) {
     bool cond1 = se_conecta_a_todos_os_vertices_da_clique(vertex, clique);
     bool cond2 = esta_na_clique(vertex, clique);
 
-    cout << "Vizinho: " << vertex << endl;
-    cout << "cond1 (se conecta a todos): " << cond1 << endl;
-    cout << "cond2 (já está na clique): " << cond2 << endl;
+    //cout << "vertice vizinho: " << vertex << endl;
+    //cout << "se conecta a todos (tem que): " << cond1 << endl;
+    //cout << "já está na clique (não pode): " << cond2 << endl;
 
-    return (cond1 && !cond2);
+    bool condf = (cond1 && !cond2); 
+    //cout << "decisão: " << condf << endl;
+    return condf;
 }
 
 
@@ -134,44 +142,63 @@ int Graph::contagem_cliques_serial(int k) {
     }
 
     int count = 0;
-
+    int iteracoes = 0;
     while(!cliques.empty()){
-        vector<int> clique;
+        //cout << "-----------------------------------" << endl;
+        //cout << "interação - " << ++iteracoes << endl;
         
-        clique = cliques.back();
+        vector<int> clique = cliques.back();
+        //cout << "Size of cliques before pop: " << cliques.size() << endl;
         cliques.pop_back();
-    
+        //cout << "Size of cliques after pop: " << cliques.size() << endl;
+
+        
+        //cout << "Clique atual: ";
+        // printar_clique(clique);
+        //cout << endl;
         int tamanho_clique = clique.size();
         if(tamanho_clique == k){
+            //cout << "Clique K encontrada! Pulando!!!" << endl;
             count++;
             continue;
         }
         
-        int ultimo_vertice = clique[clique.size() -  1];
+        int ultimo_vertice = clique.back();
         
+        //cout << "Ultimo vertice: " << ultimo_vertice << endl;
+
         for(int vertice : clique){
             vector<int> vizinhos_atual = getNeighbours(vertice); 
+            //cout << "Vizinhos do vertice " << vertice << ": ";
+            // for(auto v: vizinhos_atual){
+                //cout << v << " ";
+            // }
+            //cout << endl;
             
+            vector<int> nova_clique = clique;
             for(int vizinho: vizinhos_atual){
-                if(formar_clique(vizinho, clique) && vizinho > ultimo_vertice){
-                    vector<int> nova_clique = clique;
+                if(vizinho > ultimo_vertice && formar_clique(vizinho, nova_clique)){
+                    //cout << "ENTROU!!! " << endl;
                     nova_clique.push_back(vizinho);
-                    cliques.push_back(nova_clique);
                 }
             }
+            if (nova_clique.size() > clique.size()) {
+                cliques.push_back(nova_clique);
+            }
         }
-    }
 
+        //cout << "voltou para cima" << endl;
+
+    }
     return count;
-    
 }
 
 int main() {
-    string dataset = "../datasets/citeseer.edgelist";
+    string dataset = "../datasets/ca_astroph.edgelist";
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_serial(3) << endl;
+    cout << g->contagem_cliques_serial(6) << endl;
     g->release();
     delete g;
 }
