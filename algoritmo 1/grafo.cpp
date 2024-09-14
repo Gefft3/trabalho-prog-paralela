@@ -147,13 +147,13 @@ int Graph::contagem_cliques_serial(int k) {
             continue;
         }
         
-        int last_vertex = clique[clique.size() -  1];
+        int ultimo_vertice = clique[clique.size() -  1];
         
         for(int vertice : clique){
             vector<int> vizinhos_atual = getNeighbours(vertice); 
             
             for(int vizinho: vizinhos_atual){
-                if(formar_clique(vizinho, clique) && vizinho > last_vertex){
+                if(formar_clique(vizinho, clique) && vizinho > ultimo_vertice){
                     vector<int> nova_clique = clique;
                     nova_clique.push_back(vizinho);
                     cliques.push_back(nova_clique);
