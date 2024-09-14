@@ -159,7 +159,7 @@ int Graph::contagem_cliques_serial(int k) {
                     cliques.push_back(nova_clique);
                 }
             }
-        } 
+        }
     }
 
     return count;
