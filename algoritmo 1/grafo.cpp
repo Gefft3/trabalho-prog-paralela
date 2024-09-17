@@ -135,12 +135,12 @@ bool Graph::formar_clique(int vertex, vector<int> clique) {
 
 
 int Graph::contagem_cliques_serial(int k) {
-    vector<vector<int>> cliques;
+    set<vector<int>> cliques;
 
-    set<vector<int>> cliques_inseridas;
+    
 
     for(auto v: vertices) {
-        cliques.push_back({v});
+        cliques.insert({v});
     }
 
     int count = 0;
@@ -149,9 +149,10 @@ int Graph::contagem_cliques_serial(int k) {
         //cout << "-----------------------------------" << endl;
         //cout << "interação - " << ++iteracoes << endl;
         
-        vector<int> clique = cliques.back();
+        vector<int> clique = *cliques.cbegin();
         //cout << "Size of cliques before pop: " << cliques.size() << endl;
-        cliques.pop_back();
+        
+        cliques.erase(find(cliques.begin(), cliques.end(), clique));
         //cout << "Size of cliques after pop: " << cliques.size() << endl;
 
         
@@ -161,7 +162,7 @@ int Graph::contagem_cliques_serial(int k) {
         int tamanho_clique = clique.size();
         if(tamanho_clique == k){
             //cout << "Clique encontrada: ";
-            cliques_inseridas.insert(clique);
+            count++;
             continue;
         }
         
@@ -183,7 +184,7 @@ int Graph::contagem_cliques_serial(int k) {
                     //cout << "ENTROU!!! " << endl;
                     vector<int> nova_clique = clique;
                     nova_clique.push_back(vizinho);
-                    cliques.push_back(nova_clique);
+                    cliques.insert(nova_clique);
                 }
             }
         }
@@ -191,7 +192,7 @@ int Graph::contagem_cliques_serial(int k) {
         //cout << "voltou para cima" << endl;
 
     }
-    count = cliques_inseridas.size();
+    
     return count;
 }
 
@@ -201,7 +202,7 @@ int main() {
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_serial(4) << endl;
+    cout << g->contagem_cliques_serial(5) << endl;
     g->release();
     delete g;
 }
