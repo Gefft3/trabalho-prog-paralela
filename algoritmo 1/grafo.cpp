@@ -51,17 +51,17 @@ class Graph {
 
         void printar_grafo() {
             for (auto v : vertices) {
-                //cout << v << ": ";
+                cout << v << ": ";
                 for (auto n : vizinhos[v]) {
-                    //cout << n << " ";
+                    cout << n << " ";
                 }
-                //cout << endl;
+                cout << endl;
             }
         }
 
         void printar_clique(vector<int> clique) {
             for (auto v : clique) {
-                //cout << v << " ";
+                cout << v << " ";
             }
         }
 
@@ -142,7 +142,7 @@ int Graph::contagem_cliques_serial(int k) {
     }
 
     int count = 0;
-    int iteracoes = 0;
+    // int iteracoes = 0;
     while(!cliques.empty()){
         //cout << "-----------------------------------" << endl;
         //cout << "interação - " << ++iteracoes << endl;
@@ -194,11 +194,11 @@ int Graph::contagem_cliques_serial(int k) {
 }
 
 int main() {
-    string dataset = "../datasets/ca_astroph.edgelist";
+    string dataset = "../datasets/citeseer.edgelist";
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_serial(6) << endl;
+    cout << g->contagem_cliques_serial(3) << endl;
     g->release();
     delete g;
 }
