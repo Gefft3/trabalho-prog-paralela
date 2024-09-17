@@ -137,6 +137,8 @@ bool Graph::formar_clique(int vertex, vector<int> clique) {
 int Graph::contagem_cliques_serial(int k) {
     vector<vector<int>> cliques;
 
+    set<vector<int>> cliques_inseridas;
+
     for(auto v: vertices) {
         cliques.push_back({v});
     }
@@ -158,8 +160,8 @@ int Graph::contagem_cliques_serial(int k) {
         //cout << endl;
         int tamanho_clique = clique.size();
         if(tamanho_clique == k){
-            //cout << "Clique K encontrada! Pulando!!!" << endl;
-            count++;
+            //cout << "Clique encontrada: ";
+            cliques_inseridas.insert(clique);
             continue;
         }
         
@@ -175,30 +177,31 @@ int Graph::contagem_cliques_serial(int k) {
             // }
             //cout << endl;
             
-            vector<int> nova_clique = clique;
+            
             for(int vizinho: vizinhos_atual){
-                if(vizinho > ultimo_vertice && formar_clique(vizinho, nova_clique)){
+                if(vizinho > ultimo_vertice && formar_clique(vizinho, clique)){
                     //cout << "ENTROU!!! " << endl;
+                    vector<int> nova_clique = clique;
                     nova_clique.push_back(vizinho);
+                    cliques.push_back(nova_clique);
                 }
-            }
-            if (nova_clique.size() > clique.size()) {
-                cliques.push_back(nova_clique);
             }
         }
 
         //cout << "voltou para cima" << endl;
 
     }
+    count = cliques_inseridas.size();
     return count;
 }
 
 int main() {
-    string dataset = "../datasets/citeseer.edgelist";
+    string dataset = "../datasets/ca_astroph.edgelist";
+    // string dataset = "teste";
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_serial(3) << endl;
+    cout << g->contagem_cliques_serial(4) << endl;
     g->release();
     delete g;
 }
