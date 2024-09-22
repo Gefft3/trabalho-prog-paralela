@@ -34,7 +34,7 @@ class Graph {
             }
         }
 
-        int contagem_cliques_serial(int k);
+        int contagem_cliques_paralela(int k, int n_threads);
         bool esta_na_clique(int vertex, vector<int> clique);
         bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
         bool formar_clique(int vertex, vector<int> clique);
@@ -138,39 +138,41 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-int Graph::contagem_cliques_serial(int k) {
-    unsigned int num_threads = std::thread::hardware_concurrency();
+int Graph::contagem_cliques_paralela(int k, int n_threads) {
+    unsigned int num_threads = n_threads;
+
     if (num_threads == 0) {
         num_threads = 1; 
     }
 
-    std::vector<std::vector<int>> cliques_iniciais;
+    vector<vector<int>> cliques_iniciais;
     for (auto v : vertices) {
         cliques_iniciais.push_back({v});
     }
 
-    std::vector<std::vector<std::vector<int>>> cliques_por_thread(num_threads);
+    vector<vector<vector<int>>> cliques_por_thread(num_threads);
+    
     for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
         cliques_por_thread[i % num_threads].push_back(cliques_iniciais[i]);
     }
 
-    std::vector<int> contagens(num_threads, 0);
-    std::vector<std::thread> threads;
+    vector<int> contagens(num_threads, 0);
+    vector<thread> threads;
 
-    std::set<std::vector<int>> cliques_verificados;
-    std::mutex clique_mutex;
+    set<vector<int>> cliques_verificados;
+    mutex clique_mutex;
 
     for (unsigned int tid = 0; tid < num_threads; ++tid) {
         threads.emplace_back([&, tid]() {
-            std::vector<std::vector<int>> cliques = cliques_por_thread[tid];
+            vector<vector<int>> cliques = cliques_por_thread[tid];
             int &count = contagens[tid];
 
             while (!cliques.empty()) {
-                std::vector<int> clique = cliques.back();
+                vector<int> clique = cliques.back();
                 cliques.pop_back();
 
                 {
-                    std::lock_guard<std::mutex> lock(clique_mutex);
+                    lock_guard<mutex> lock(clique_mutex);
                     if (clique_ja_existe(cliques_verificados, clique)) {
                         continue; 
                     }
@@ -186,11 +188,11 @@ int Graph::contagem_cliques_serial(int k) {
                 int ultimo_vertice = clique.back();
 
                 for (int vertice : clique) {
-                    std::vector<int> vizinhos_atual = getNeighbours(vertice);
+                    vector<int> vizinhos_atual = getNeighbours(vertice);
 
                     for (int vizinho : vizinhos_atual) {
                         if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
-                            std::vector<int> nova_clique = clique;
+                            vector<int> nova_clique = clique;
                             nova_clique.push_back(vizinho);
                             cliques.push_back(nova_clique);
                         }
@@ -218,7 +220,7 @@ int main() {
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_serial(3) << endl;
+    cout << g->contagem_cliques_paralela(5,8) << endl;
     g->release();
     delete g;
 }
