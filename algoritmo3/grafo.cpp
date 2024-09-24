@@ -34,7 +34,7 @@ class Graph {
             }
         }
 
-        int contagem_cliques_paralela(int k, int n_threads);
+        int contagem_cliques_paralela_balanceada(int k, int n_threads, int carga_roubar);
         bool esta_na_clique(int vertex, vector<int> clique);
         bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
         bool formar_clique(int vertex, vector<int> clique);
@@ -138,7 +138,7 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-int Graph::contagem_cliques_paralela(int k, int n_threads) {
+int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int carga_roubar) {
     unsigned int num_threads = n_threads;
 
     if (num_threads == 0) {
@@ -220,7 +220,7 @@ int main() {
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_paralela(5,8) << endl;
+    cout << g->contagem_cliques_paralela_balanceada(5,8, 10) << endl;
     g->release();
     delete g;
 }
