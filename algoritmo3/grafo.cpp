@@ -10,8 +10,11 @@
 #include <set>
 #include <thread>
 #include <mutex>
+#include <queue>
+#include <atomic>
 
 using namespace std;
+using namespace std::chrono;
 
 class Graph {
     public:
@@ -34,7 +37,7 @@ class Graph {
             }
         }
 
-        int contagem_cliques_paralela_balanceada(int k, int n_threads, int carga_roubar);
+        int contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_carga);
         bool esta_na_clique(int vertex, vector<int> clique);
         bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
         bool formar_clique(int vertex, vector<int> clique);
@@ -138,81 +141,116 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int carga_roubar) {
-    unsigned int num_threads = n_threads;
+int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_carga) {
+        unsigned int num_threads = n_threads;
+        if (num_threads == 0) {
+            num_threads = 1; 
+        }
 
-    if (num_threads == 0) {
-        num_threads = 1; 
-    }
+        vector<vector<int>> cliques_iniciais;
+        for (auto v : vertices) {
+            cliques_iniciais.push_back({v});
+        }
 
-    vector<vector<int>> cliques_iniciais;
-    for (auto v : vertices) {
-        cliques_iniciais.push_back({v});
-    }
+        // Filas de cliques por thread
+        vector<queue<vector<int>>> filas_de_cliques(num_threads);
 
-    vector<vector<vector<int>>> cliques_por_thread(num_threads);
-    
-    for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
-        cliques_por_thread[i % num_threads].push_back(cliques_iniciais[i]);
-    }
+        for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
+            filas_de_cliques[i % num_threads].push(cliques_iniciais[i]);
+        }
 
-    vector<int> contagens(num_threads, 0);
-    vector<thread> threads;
+        vector<int> contagens(num_threads, 0);
+        vector<thread> threads;
 
-    set<vector<int>> cliques_verificados;
-    mutex clique_mutex;
+        set<vector<int>> cliques_verificados;
+        mutex clique_mutex;
+        mutex fila_mutex;
+        atomic<bool> trabalho_disponivel(true); 
 
-    for (unsigned int tid = 0; tid < num_threads; ++tid) {
-        threads.emplace_back([&, tid]() {
-            vector<vector<int>> cliques = cliques_por_thread[tid];
-            int &count = contagens[tid];
+        for (unsigned int tid = 0; tid < num_threads; ++tid) {
+            threads.emplace_back([&, tid]() {
+                while (trabalho_disponivel) {
+                    vector<int> clique;
+                    bool clique_obtido = false;
 
-            while (!cliques.empty()) {
-                vector<int> clique = cliques.back();
-                cliques.pop_back();
-
-                {
-                    lock_guard<mutex> lock(clique_mutex);
-                    if (clique_ja_existe(cliques_verificados, clique)) {
-                        continue; 
+                    // tenta achar carga de trabalho na propria fila
+                    {
+                        lock_guard<mutex> lock(fila_mutex);
+                        if (!filas_de_cliques[tid].empty()) {
+                            clique = filas_de_cliques[tid].front();
+                            filas_de_cliques[tid].pop();
+                            clique_obtido = true;
+                        }
                     }
-                    cliques_verificados.insert(clique); 
-                }
 
-                int tamanho_clique = clique.size();
-                if (tamanho_clique == k) {
-                    count++;
-                    continue;
-                }
+                    // procura na propria fila primeiro, e depois nas filas de outras threads (caso não tenha nenhuma carga de trabalho na propria)
+                    if (!clique_obtido) {
+                        for (unsigned int i = 0; i < num_threads; ++i) {
+                            if (i != tid) {
+                                lock_guard<mutex> lock(fila_mutex);
+                                if (!filas_de_cliques[i].empty()) {
+                                    clique = filas_de_cliques[i].front();
+                                    filas_de_cliques[i].pop();
+                                    clique_obtido = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
 
-                int ultimo_vertice = clique.back();
+                    // encerrar thread se não houver mais trabalho em nhenhuma thread
+                    if (!clique_obtido) {
+                        trabalho_disponivel = false;
+                        return;
+                    }
 
-                for (int vertice : clique) {
-                    vector<int> vizinhos_atual = getNeighbours(vertice);
+                    {
+                        lock_guard<mutex> lock(clique_mutex);
+                        if (clique_ja_existe(cliques_verificados, clique)) {
+                            continue;
+                        }
+                        cliques_verificados.insert(clique);
+                    }
 
-                    for (int vizinho : vizinhos_atual) {
-                        if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
-                            vector<int> nova_clique = clique;
-                            nova_clique.push_back(vizinho);
-                            cliques.push_back(nova_clique);
+                    int tamanho_clique = clique.size();
+                    if (tamanho_clique == k) {
+                        contagens[tid]++;
+                        continue;
+                    }
+
+                    int ultimo_vertice = clique.back();
+
+                    for (int vertice : clique) {
+                        vector<int> vizinhos_atual = getNeighbours(vertice);
+
+                        for (int vizinho : vizinhos_atual) {
+                            if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
+                                vector<int> nova_clique = clique;
+                                nova_clique.push_back(vizinho);
+                                //zona crítica
+                                {
+                                    lock_guard<mutex> lock(fila_mutex);
+                                    filas_de_cliques[tid].push(nova_clique);
+                                }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+
+        for (auto &th : threads) {
+            th.join();
+        }
+
+        int total_count = 0;
+        for (int c : contagens) {
+            total_count += c;
+        }
+
+        return total_count;
     }
 
-    for (auto &th : threads) {
-        th.join();
-    }
-
-    int total_count = 0;
-    for (int c : contagens) {
-        total_count += c;
-    }
-
-    return total_count;
-}
 
 int main() {
     string dataset = "../datasets/ca_astroph.edgelist";
@@ -220,7 +258,14 @@ int main() {
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_paralela_balanceada(5,8, 10) << endl;
+    
+    auto start = high_resolution_clock::now();
+    int result = g->contagem_cliques_paralela_balanceada(3, 4, 20);
+    auto end = high_resolution_clock::now();
+    duration<double> duration = end - start;
+
+    cout << "Resultado: " << result << endl;
+    cout << "Tempo de execução: " << duration.count() << " segundos" << endl;
     g->release();
     delete g;
 }

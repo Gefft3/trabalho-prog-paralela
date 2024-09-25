@@ -220,7 +220,8 @@ int main() {
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
     // g->printar_grafo();
-    cout << g->contagem_cliques_paralela(5,8) << endl;
+    
+    cout << g->contagem_cliques_paralela(3,8) << endl;
     g->release();
     delete g;
 }
