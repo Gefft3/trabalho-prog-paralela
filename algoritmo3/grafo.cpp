@@ -12,6 +12,7 @@
 #include <mutex>
 #include <queue>
 #include <atomic>
+#include <cstdlib>
 
 using namespace std;
 using namespace std::chrono;
@@ -192,6 +193,7 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
                                     clique = filas_de_cliques[i].front();
                                     filas_de_cliques[i].pop();
                                     clique_obtido = true;
+                                    
                                     break;
                                 }
                             }
@@ -252,15 +254,18 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
     }
 
 
-int main() {
-    string dataset = "../datasets/ca_astroph.edgelist";
-    // string dataset = "teste";
+int main(int argc, char* argv[]) {
+    
+    string dataset = argv[1];
+    int k_cliques = atoi(argv[2]);
+    int n_threads = atoi(argv[3]);
+    int roubo_carga = atoi(argv[4]);    
+    
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
-    // g->printar_grafo();
-    
+
     auto start = high_resolution_clock::now();
-    int result = g->contagem_cliques_paralela_balanceada(3, 4, 20);
+    int result = g->contagem_cliques_paralela_balanceada(k_cliques, n_threads, roubo_carga);
     auto end = high_resolution_clock::now();
     duration<double> duration = end - start;
 
