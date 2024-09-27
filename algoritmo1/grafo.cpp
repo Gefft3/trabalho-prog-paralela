@@ -10,6 +10,7 @@
 #include <set>
 
 using namespace std;
+using namespace std::chrono;
 
 class Graph {
     public:
@@ -196,13 +197,23 @@ int Graph::contagem_cliques_serial(int k) {
     return count;
 }
 
-int main() {
-    string dataset = "../datasets/ca_astroph.edgelist";
-    // string dataset = "teste";
+int main(int argc, char* argv[]) {
+
+    string dataset = argv[1];
+    int k_clique = atoi(argv[2]);
+
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
-    // g->printar_grafo();
-    cout << g->contagem_cliques_serial(5) << endl;
+    
+
+    auto start = high_resolution_clock::now();
+    int clique_count = g->contagem_cliques_serial(k_clique);
+    auto end = chrono::high_resolution_clock::now();
+    duration<double> duration = end - start;
+    
+    cout << "Resultado: " << clique_count << endl;
+    cout << "Tempo de execução: " << duration.count() << " segundos" << endl;
+    
     g->release();
     delete g;
 }
