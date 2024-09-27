@@ -145,39 +145,41 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
         num_threads = 1; 
     }
 
+    // Criação dos cliques iniciais com um vértice
     vector<vector<int>> cliques_iniciais;
     for (auto v : vertices) {
         cliques_iniciais.push_back({v});
     }
 
+    // Dividindo os cliques iniciais igualmente entre as threads
     vector<vector<vector<int>>> cliques_por_thread(num_threads);
-    
-    for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
-        cliques_por_thread[i % num_threads].push_back(cliques_iniciais[i]);
-    }
+    size_t num_cliques = cliques_iniciais.size();
+    size_t cliques_por_thread_size = num_cliques / num_threads;
+    size_t excesso = num_cliques % num_threads;
 
+    // Distribuição estática dos cliques
+    size_t indice = 0;
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        size_t num_para_thread = cliques_por_thread_size + (tid < excesso ? 1 : 0);
+        for (size_t j = 0; j < num_para_thread; ++j) {
+            cliques_por_thread[tid].push_back(cliques_iniciais[indice++]);
+        }
+    }
+    
     vector<int> contagens(num_threads, 0);
     vector<thread> threads;
 
-    set<vector<int>> cliques_verificados;
-    mutex clique_mutex;
-
     for (unsigned int tid = 0; tid < num_threads; ++tid) {
         threads.emplace_back([&, tid]() {
-            vector<vector<int>> cliques = cliques_por_thread[tid];
+            set<vector<int>> cliques;
+            cliques.insert(cliques_por_thread[tid].begin(), cliques_por_thread[tid].end());
             int &count = contagens[tid];
 
             while (!cliques.empty()) {
-                vector<int> clique = cliques.back();
-                cliques.pop_back();
+                
+                vector<int> clique = *cliques.begin();
+                cliques.erase(cliques.begin());
 
-                {
-                    lock_guard<mutex> lock(clique_mutex);
-                    if (clique_ja_existe(cliques_verificados, clique)) {
-                        continue; 
-                    }
-                    cliques_verificados.insert(clique); 
-                }
 
                 int tamanho_clique = clique.size();
                 if (tamanho_clique == k) {
@@ -194,7 +196,8 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
                         if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
                             vector<int> nova_clique = clique;
                             nova_clique.push_back(vizinho);
-                            cliques.push_back(nova_clique);
+                            // cliques.push_back(nova_clique);
+                            cliques.insert(nova_clique);
                         }
                     }
                 }
@@ -202,10 +205,12 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
         });
     }
 
+    // Espera por todas as threads terminarem
     for (auto &th : threads) {
         th.join();
     }
 
+    // Soma os resultados de todas as threads
     int total_count = 0;
     for (int c : contagens) {
         total_count += c;
@@ -215,7 +220,7 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
 }
 
 int main() {
-    string dataset = "../datasets/ca_astroph.edgelist";
+    string dataset = "../datasets/citeseer.edgelist";
     // string dataset = "teste";
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
