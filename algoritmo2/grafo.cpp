@@ -165,7 +165,7 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
             cliques_por_thread[tid].push_back(cliques_iniciais[indice++]);
         }
     }
-    
+
     vector<int> contagens(num_threads, 0);
     vector<thread> threads;
 
@@ -196,7 +196,6 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
                         if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
                             vector<int> nova_clique = clique;
                             nova_clique.push_back(vizinho);
-                            // cliques.push_back(nova_clique);
                             cliques.insert(nova_clique);
                         }
                     }
