@@ -171,11 +171,9 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
         }
     }
 
-
     vector<int> contagens(num_threads, 0);
     vector<thread> threads;
     vector<mutex> mutexes(num_threads);   
-
     
     atomic<int> threads_trabalhando(num_threads);  // contado de threads ainda ativas
     atomic<bool> trabalho_ativo(true);  // flag se tem thread atv
@@ -214,8 +212,6 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
         return false;
     };
 
-
-
     for (unsigned int tid = 0; tid < num_threads; ++tid) {
         threads.emplace_back([&, tid]() {
             set<vector<int>> cliques;
@@ -249,18 +245,19 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
 
                 // tenta roubar cliques de outras threads se a atual estiver ociosa
                 if (!roubar_cliques(tid)) {
-                    break;  // Se não conseguir roubar, encerra a thread
+                    // cout << "Thread " << tid << " não conseguiu roubar" << endl;
+                    break;  // se não conseguir roubar encerra a thread
                 }
             }
         });
     }
 
-    // Espera por todas as threads terminarem
+    // espera por todas as threads terminarem
     for (auto &th : threads) {
         th.join();
     }
 
-    // Soma os resultados de todas as threads
+    // soma os resultados de todas as threads
     int total_count = 0;
     for (int c : contagens) {
         total_count += c;
