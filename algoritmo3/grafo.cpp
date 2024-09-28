@@ -195,9 +195,12 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsig
 
             visitados.insert(outro_tid);
 
+            if (cliques_por_thread[outro_tid].size() < 2 * roubo_carga)
+                continue;
+
+
             {
                 lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
-                if (cliques_por_thread[outro_tid].size() > 2 * roubo_carga) {
                     {
                         lock_guard<mutex> lock_roubo(mutexes[tid]);  // bloqueia a thread atual
                         for (long unsigned int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
@@ -206,8 +209,7 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsig
                         }
                     }
                     // cout << "Thread " << tid << " roubou de " << outro_tid << endl;
-                    return true;
-                }
+                    return true;   
             }
         }
         // cout << "Thread " << tid << " não conseguiu roubar" << endl;

@@ -1,4 +1,4 @@
-dataset="../datasets/dblp.edgelist"
+dataset="../datasets/citeseer.edgelist"
 k_cliques=3
 n_threads=8
 
