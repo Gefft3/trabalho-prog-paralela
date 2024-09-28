@@ -218,14 +218,16 @@ int Graph::contagem_cliques_paralela(int k, int n_threads) {
     return total_count;
 }
 
-int main() {
-    string dataset = "../datasets/citeseer.edgelist";
-    // string dataset = "teste";
+int main(int argc, char *argv[]) {
+    
+    string dataset = argv[1];
+    int k_cliques = atoi(argv[2]);
+    int n_threads = atoi(argv[3]);
+
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
-    // g->printar_grafo();
     
-    cout << g->contagem_cliques_paralela(3,8) << endl;
+    cout << g->contagem_cliques_paralela(k_cliques,n_threads) << endl;
     g->release();
     delete g;
 }
