@@ -12,6 +12,7 @@
 #include <mutex>
 
 using namespace std;
+using namespace std::chrono;
 
 class Graph {
     public:
@@ -226,8 +227,14 @@ int main(int argc, char *argv[]) {
 
     vector<pair<int, int>> edges = rename(dataset);
     Graph* g = new Graph(edges);
+
+    auto start = high_resolution_clock::now();
+    int result = g->contagem_cliques_paralela(k_cliques,n_threads);
+    auto end = high_resolution_clock::now();
+    duration<double> duration = end - start;
     
-    cout << g->contagem_cliques_paralela(k_cliques,n_threads) << endl;
+    cout << "Resultado: " << result << endl;
+    cout << "Tempo de execução: " << duration.count() << " segundos" << endl;
     g->release();
     delete g;
 }
