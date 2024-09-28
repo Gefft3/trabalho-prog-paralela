@@ -1,6 +1,6 @@
-dataset="../datasets/citeseer.edgelist"
+dataset="../datasets/dblp.edgelist"
 k_cliques=3
 n_threads=8
-carga_roubada=10
+carga_roubada=1
 
 ./programa $dataset $k_cliques $n_threads $carga_roubada

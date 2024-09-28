@@ -198,7 +198,6 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsig
             if (cliques_por_thread[outro_tid].size() < 2 * roubo_carga)
                 continue;
 
-
             {
                 lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
                     {
