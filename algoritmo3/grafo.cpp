@@ -39,7 +39,7 @@ class Graph {
             }
         }
 
-        int contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_carga);
+        int contagem_cliques_paralela_balanceada(int k, int n_threads, long unsigned  roubo_carga);
         bool esta_na_clique(int vertex, vector<int> clique);
         bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
         bool formar_clique(int vertex, vector<int> clique);
@@ -143,7 +143,7 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_carga) {
+int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsigned int roubo_carga) {
     unsigned int num_threads = n_threads;
 
     if (num_threads == 0) {
@@ -173,8 +173,8 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
 
     vector<int> contagens(num_threads, 0);
     vector<thread> threads;
+
     vector<mutex> mutexes(num_threads);   
-    
     atomic<int> threads_trabalhando(num_threads);  // contado de threads ainda ativas
     atomic<bool> trabalho_ativo(true);  // flag se tem thread atv
 
@@ -186,7 +186,7 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
 
         // cout << "Thread " << tid << " tentando roubar" << endl;
 
-        for (int tentativa = 0; tentativa < num_threads; ++tentativa) {
+        for (unsigned int tentativa = 0; tentativa < num_threads; ++tentativa) {
             unsigned int outro_tid = dist(gen);
 
             if (visitados.find(outro_tid) != visitados.end() || outro_tid == tid) {
@@ -197,18 +197,20 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
 
             {
                 lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
-                if (cliques_por_thread[outro_tid].size() >= 2 * roubo_carga) {
+                if (cliques_por_thread[outro_tid].size() > 2 * roubo_carga) {
                     {
                         lock_guard<mutex> lock_roubo(mutexes[tid]);  // bloqueia a thread atual
-                        for (int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
+                        for (long unsigned int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
                             cliques_por_thread[tid].push_back(cliques_por_thread[outro_tid].back());
                             cliques_por_thread[outro_tid].pop_back();
                         }
                     }
+                    // cout << "Thread " << tid << " roubou de " << outro_tid << endl;
                     return true;
                 }
             }
         }
+        // cout << "Thread " << tid << " não conseguiu roubar" << endl;
         return false;
     };
 
@@ -218,36 +220,34 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
             cliques.insert(cliques_por_thread[tid].begin(), cliques_por_thread[tid].end());
             int &count = contagens[tid];
 
-            while (true) {
-                // Processamento dos cliques da thread atual
-                while (!cliques.empty()) {
-                    vector<int> clique = *cliques.begin();
-                    cliques.erase(cliques.begin());
+            while (!cliques.empty()) {
+                
+                vector<int> clique = *cliques.begin();
+                cliques.erase(cliques.begin());
 
-                    int tamanho_clique = clique.size();
-                    if (tamanho_clique == k) {
-                        count++;
-                        continue;
-                    }
 
-                    int ultimo_vertice = clique.back();
-                    for (int vertice : clique) {
-                        vector<int> vizinhos_atual = getNeighbours(vertice);
-                        for (int vizinho : vizinhos_atual) {
-                            if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
-                                vector<int> nova_clique = clique;
-                                nova_clique.push_back(vizinho);
-                                cliques.insert(nova_clique);
-                            }
+                int tamanho_clique = clique.size();
+                if (tamanho_clique == k) {
+                    count++;
+                    continue;
+                }
+
+                int ultimo_vertice = clique.back();
+
+                for (int vertice : clique) {
+                    vector<int> vizinhos_atual = getNeighbours(vertice);
+
+                    for (int vizinho : vizinhos_atual) {
+                        if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
+                            vector<int> nova_clique = clique;
+                            nova_clique.push_back(vizinho);
+                            cliques.insert(nova_clique);
                         }
                     }
                 }
-
-                // tenta roubar cliques de outras threads se a atual estiver ociosa
-                if (!roubar_cliques(tid)) {
-                    // cout << "Thread " << tid << " não conseguiu roubar" << endl;
-                    break;  // se não conseguir roubar encerra a thread
-                }
+            }
+            if(!roubar_cliques(tid)){
+                threads_trabalhando--;
             }
         });
     }
