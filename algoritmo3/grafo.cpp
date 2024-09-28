@@ -143,115 +143,81 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
 }
 
 int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_carga) {
-        unsigned int num_threads = n_threads;
-        if (num_threads == 0) {
-            num_threads = 1; 
+    unsigned int num_threads = n_threads;
+
+    if (num_threads == 0) {
+        num_threads = 1; 
+    }
+
+    vector<vector<int>> cliques_iniciais;
+    for (auto v : vertices) {
+        cliques_iniciais.push_back({v});
+    }
+
+    vector<vector<vector<int>>> cliques_por_thread(num_threads);
+    size_t num_cliques = cliques_iniciais.size();
+    size_t cliques_por_thread_size = num_cliques / num_threads;
+    size_t excesso = num_cliques % num_threads;
+
+    size_t indice = 0;
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        size_t num_para_thread = cliques_por_thread_size + (tid < excesso ? 1 : 0);
+        for (size_t j = 0; j < num_para_thread; ++j) {
+            cliques_por_thread[tid].push_back(cliques_iniciais[indice++]);
         }
+    }
 
-        vector<vector<int>> cliques_iniciais;
-        for (auto v : vertices) {
-            cliques_iniciais.push_back({v});
-        }
+    vector<int> contagens(num_threads, 0);
+    vector<thread> threads;
 
-        // Filas de cliques por thread
-        vector<queue<vector<int>>> filas_de_cliques(num_threads);
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        threads.emplace_back([&, tid]() {
+            set<vector<int>> cliques;
+            cliques.insert(cliques_por_thread[tid].begin(), cliques_por_thread[tid].end());
+            int &count = contagens[tid];
 
-        for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
-            filas_de_cliques[i % num_threads].push(cliques_iniciais[i]);
-        }
+            while (!cliques.empty()) {
+                
+                vector<int> clique = *cliques.begin();
+                cliques.erase(cliques.begin());
 
-        vector<int> contagens(num_threads, 0);
-        vector<thread> threads;
 
-        set<vector<int>> cliques_verificados;
-        mutex clique_mutex;
-        mutex fila_mutex;
-        atomic<bool> trabalho_disponivel(true); 
+                int tamanho_clique = clique.size();
+                if (tamanho_clique == k) {
+                    count++;
+                    continue;
+                }
 
-        for (unsigned int tid = 0; tid < num_threads; ++tid) {
-            threads.emplace_back([&, tid]() {
-                while (trabalho_disponivel) {
-                    vector<int> clique;
-                    bool clique_obtido = false;
+                int ultimo_vertice = clique.back();
 
-                    // tenta achar carga de trabalho na propria fila
-                    {
-                        lock_guard<mutex> lock(fila_mutex);
-                        if (!filas_de_cliques[tid].empty()) {
-                            clique = filas_de_cliques[tid].front();
-                            filas_de_cliques[tid].pop();
-                            clique_obtido = true;
-                        }
-                    }
+                for (int vertice : clique) {
+                    vector<int> vizinhos_atual = getNeighbours(vertice);
 
-                    // procura na propria fila primeiro, e depois nas filas de outras threads (caso não tenha nenhuma carga de trabalho na propria)
-                    if (!clique_obtido) {
-                        for (unsigned int i = 0; i < num_threads; ++i) {
-                            if (i != tid) {
-                                lock_guard<mutex> lock(fila_mutex);
-                                if (!filas_de_cliques[i].empty()) {
-                                    clique = filas_de_cliques[i].front();
-                                    filas_de_cliques[i].pop();
-                                    clique_obtido = true;
-                                    
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    // encerrar thread se não houver mais trabalho em nhenhuma thread
-                    if (!clique_obtido) {
-                        trabalho_disponivel = false;
-                        return;
-                    }
-
-                    {
-                        lock_guard<mutex> lock(clique_mutex);
-                        if (clique_ja_existe(cliques_verificados, clique)) {
-                            continue;
-                        }
-                        cliques_verificados.insert(clique);
-                    }
-
-                    int tamanho_clique = clique.size();
-                    if (tamanho_clique == k) {
-                        contagens[tid]++;
-                        continue;
-                    }
-
-                    int ultimo_vertice = clique.back();
-
-                    for (int vertice : clique) {
-                        vector<int> vizinhos_atual = getNeighbours(vertice);
-
-                        for (int vizinho : vizinhos_atual) {
-                            if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
-                                vector<int> nova_clique = clique;
-                                nova_clique.push_back(vizinho);
-                                //zona crítica
-                                {
-                                    lock_guard<mutex> lock(fila_mutex);
-                                    filas_de_cliques[tid].push(nova_clique);
-                                }
-                            }
+                    for (int vizinho : vizinhos_atual) {
+                        if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
+                            vector<int> nova_clique = clique;
+                            nova_clique.push_back(vizinho);
+                            cliques.insert(nova_clique);
                         }
                     }
                 }
-            });
-        }
-
-        for (auto &th : threads) {
-            th.join();
-        }
-
-        int total_count = 0;
-        for (int c : contagens) {
-            total_count += c;
-        }
-
-        return total_count;
+            }
+        });
     }
+
+    // Espera por todas as threads terminarem
+    for (auto &th : threads) {
+        th.join();
+    }
+
+    // Soma os resultados de todas as threads
+    int total_count = 0;
+    for (int c : contagens) {
+        total_count += c;
+    }
+
+    return total_count;
+}
 
 
 int main(int argc, char* argv[]) {
