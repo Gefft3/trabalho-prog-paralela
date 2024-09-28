@@ -180,39 +180,39 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, int roubo_
     atomic<int> threads_trabalhando(num_threads);  // contado de threads ainda ativas
     atomic<bool> trabalho_ativo(true);  // flag se tem thread atv
 
-auto roubar_cliques = [&](unsigned int tid) -> bool {
-    random_device rd;
-    mt19937 gen(rd());
-    uniform_int_distribution<> dist(0, num_threads - 1);
-    set<int> visitados;
+    auto roubar_cliques = [&](unsigned int tid) -> bool {
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<> dist(0, num_threads - 1);
+        set<int> visitados;
 
-    // cout << "Thread " << tid << " tentando roubar" << endl;
+        // cout << "Thread " << tid << " tentando roubar" << endl;
 
-    for (int tentativa = 0; tentativa < num_threads; ++tentativa) {
-        unsigned int outro_tid = dist(gen);
+        for (int tentativa = 0; tentativa < num_threads; ++tentativa) {
+            unsigned int outro_tid = dist(gen);
 
-        if (visitados.find(outro_tid) != visitados.end() || outro_tid == tid) {
-            continue;
-        }
+            if (visitados.find(outro_tid) != visitados.end() || outro_tid == tid) {
+                continue;
+            }
 
-        visitados.insert(outro_tid);
+            visitados.insert(outro_tid);
 
-        {
-            lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
-            if (cliques_por_thread[outro_tid].size() >= 2 * roubo_carga) {
-                {
-                    lock_guard<mutex> lock_roubo(mutexes[tid]);  // bloqueia a thread atual
-                    for (int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
-                        cliques_por_thread[tid].push_back(cliques_por_thread[outro_tid].back());
-                        cliques_por_thread[outro_tid].pop_back();
+            {
+                lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
+                if (cliques_por_thread[outro_tid].size() >= 2 * roubo_carga) {
+                    {
+                        lock_guard<mutex> lock_roubo(mutexes[tid]);  // bloqueia a thread atual
+                        for (int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
+                            cliques_por_thread[tid].push_back(cliques_por_thread[outro_tid].back());
+                            cliques_por_thread[outro_tid].pop_back();
+                        }
                     }
+                    return true;
                 }
-                return true;
             }
         }
-    }
-    return false;
-};
+        return false;
+    };
 
 
 
