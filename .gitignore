@@ -7,3 +7,4 @@ algoritmo3/programa
 algoritmo2/grafo.o
 algoritmo2/programa
 *.o
+*.out
