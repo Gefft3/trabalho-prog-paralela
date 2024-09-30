@@ -6,6 +6,21 @@ O objetivo deste trabalho prático é permitir o projeto e implementação de um
 paralelo em uma arquitetura de memória compartilhada convencional (CPU multicore) utilizando o
 modelo de programação Pthread em C/C++.
 
+## Execução 
+Cada pasta contém um dos algoritmos implementados. 
+
+Faça:
+        
+        cd algoritmo*
+
+e 
+
+    make
+
+Para executar basta configurar o arquivo com as variáveis requeridas no call.sh e execute: 
+
+    bash call.sh
+
 ## Descrição do problema
 
 Neste trabalho vocês projetarão e implementarão algoritmos que solucionem o problema
