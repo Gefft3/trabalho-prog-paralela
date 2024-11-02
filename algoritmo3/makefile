@@ -1,6 +1,6 @@
 CXX = g++
 
-CXXFLAGS = -Wall -g -fopenmp
+CXXFLAGS = -Wall -g
 
 SOURCES = grafo.cpp sort.cpp
 

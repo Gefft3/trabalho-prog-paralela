@@ -2,13 +2,14 @@
 #include <fstream>
 #include <cstring>
 #include <chrono>
+#include <thread>
 #include <map>
 #include <vector>
 #include "sort.h"
 #include <algorithm>
 #include <set>
+#include <thread>
 #include <mutex>
-#include <omp.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -34,7 +35,7 @@ class Graph {
             }
         }
 
-        int contagem_cliques_paralela_static(int k, int n_threads);
+        int contagem_cliques_paralela(int k, int n_threads);
         bool esta_na_clique(int vertex, vector<int> clique);
         bool se_conecta_a_todos_os_vertices_da_clique(int vertex, vector<int> clique);
         bool formar_clique(int vertex, vector<int> clique);
@@ -138,9 +139,12 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-int Graph::contagem_cliques_paralela_static(int k, int n_threads) {
-    omp_set_dynamic(0);
-    omp_set_num_threads(n_threads);
+int Graph::contagem_cliques_paralela(int k, int n_threads) {
+    unsigned int num_threads = n_threads;
+
+    if (num_threads == 0) {
+        num_threads = 1; 
+    }
 
     // Criação dos cliques iniciais com um vértice
     vector<vector<int>> cliques_iniciais;
@@ -148,46 +152,72 @@ int Graph::contagem_cliques_paralela_static(int k, int n_threads) {
         cliques_iniciais.push_back({v});
     }
 
-    int total_count = 0;
+    // Dividindo os cliques iniciais igualmente entre as threads
+    vector<vector<vector<int>>> cliques_por_thread(num_threads);
+    size_t num_cliques = cliques_iniciais.size();
+    size_t cliques_por_thread_size = num_cliques / num_threads;
+    size_t excesso = num_cliques % num_threads;
 
-    #pragma omp parallel for schedule(static) reduction(+:total_count)
-    for (size_t i = 0; i < cliques_iniciais.size(); ++i) {
-        set<vector<int>> cliques;
-        cliques.insert(cliques_iniciais[i]);
+    // Distribuição estática dos cliques
+    size_t indice = 0;
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        size_t num_para_thread = cliques_por_thread_size + (tid < excesso ? 1 : 0);
+        for (size_t j = 0; j < num_para_thread; ++j) {
+            cliques_por_thread[tid].push_back(cliques_iniciais[indice++]);
+        }
+    }
 
-        int count = 0;
+    vector<int> contagens(num_threads, 0);
+    vector<thread> threads;
 
-        while (!cliques.empty()) {
-            vector<int> clique = *cliques.begin();
-            cliques.erase(cliques.begin());
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        threads.emplace_back([&, tid]() {
+            set<vector<int>> cliques;
+            cliques.insert(cliques_por_thread[tid].begin(), cliques_por_thread[tid].end());
+            int &count = contagens[tid];
 
-            if (clique.size() == k) {
-                count++;
-                continue;
-            }
+            while (!cliques.empty()) {
+                
+                vector<int> clique = *cliques.begin();
+                cliques.erase(cliques.begin());
 
-            int ultimo_vertice = clique.back();
 
-            for (int vertice : clique) {
-                vector<int> vizinhos_atual = getNeighbours(vertice);
+                int tamanho_clique = clique.size();
+                if (tamanho_clique == k) {
+                    count++;
+                    continue;
+                }
 
-                for (int vizinho : vizinhos_atual) {
-                    if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
-                        vector<int> nova_clique = clique;
-                        nova_clique.push_back(vizinho);
-                        cliques.insert(nova_clique);
+                int ultimo_vertice = clique.back();
+
+                for (int vertice : clique) {
+                    vector<int> vizinhos_atual = getNeighbours(vertice);
+
+                    for (int vizinho : vizinhos_atual) {
+                        if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
+                            vector<int> nova_clique = clique;
+                            nova_clique.push_back(vizinho);
+                            cliques.insert(nova_clique);
+                        }
                     }
                 }
             }
-        }
+        });
+    }
 
-        total_count += count;
+    // Espera por todas as threads terminarem
+    for (auto &th : threads) {
+        th.join();
+    }
+
+    // Soma os resultados de todas as threads
+    int total_count = 0;
+    for (int c : contagens) {
+        total_count += c;
     }
 
     return total_count;
 }
-
-
 
 int main(int argc, char *argv[]) {
     
@@ -199,7 +229,7 @@ int main(int argc, char *argv[]) {
     Graph* g = new Graph(edges);
 
     auto start = high_resolution_clock::now();
-    int result = g->contagem_cliques_paralela_static(k_cliques, n_threads);
+    int result = g->contagem_cliques_paralela(k_cliques,n_threads);
     auto end = high_resolution_clock::now();
     duration<double> duration = end - start;
     

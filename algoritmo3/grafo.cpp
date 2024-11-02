@@ -2,17 +2,18 @@
 #include <fstream>
 #include <cstring>
 #include <chrono>
+#include <thread>
 #include <map>
 #include <vector>
 #include "sort.h"
 #include <algorithm>
 #include <set>
+#include <thread>
 #include <mutex>
 #include <queue>
 #include <atomic>
 #include <random>
 #include <cstdlib>
-#include <omp.h>
 
 using namespace std;
 using namespace std::chrono;
@@ -142,8 +143,6 @@ bool clique_ja_existe(const std::set<std::vector<int>>& cliques, const std::vect
     return cliques.find(clique) != cliques.end();
 }
 
-#include <omp.h>
-
 int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsigned int roubo_carga) {
     unsigned int num_threads = n_threads;
 
@@ -173,122 +172,93 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsig
     }
 
     vector<int> contagens(num_threads, 0);
+    vector<thread> threads;
 
-    // Inicializa locks para cada fila de trabalho
-    vector<omp_lock_t> locks(num_threads);
-    for (unsigned int i = 0; i < num_threads; ++i) {
-        omp_init_lock(&locks[i]);
-    }
+    vector<mutex> mutexes(num_threads);   
+    atomic<int> threads_trabalhando(num_threads);  // contado de threads ainda ativas
+    atomic<bool> trabalho_ativo(true);  // flag se tem thread atv
 
-    // Configura o número de threads
-    omp_set_num_threads(num_threads);
+    auto roubar_cliques = [&](unsigned int tid) -> bool {
+        random_device rd;
+        mt19937 gen(rd());
+        uniform_int_distribution<> dist(0, num_threads - 1);
+        set<int> visitados;
 
-    #pragma omp parallel
-    {
-        unsigned int tid = omp_get_thread_num();
-        int local_count = 0;
+        // cout << "Thread " << tid << " tentando roubar" << endl;
 
-        while (true) {
-            vector<int> clique;
-            bool has_work = false;
+        for (unsigned int tentativa = 0; tentativa < num_threads; ++tentativa) {
+            unsigned int outro_tid = dist(gen);
 
-            // Tenta obter trabalho da própria fila
-            omp_set_lock(&locks[tid]);
-            if (!cliques_por_thread[tid].empty()) {
-                clique = cliques_por_thread[tid].back();
-                cliques_por_thread[tid].pop_back();
-                has_work = true;
+            if (visitados.find(outro_tid) != visitados.end() || outro_tid == tid) {
+                continue;
             }
-            omp_unset_lock(&locks[tid]);
 
-            if (has_work) {
-                // Processa a clique
+            visitados.insert(outro_tid);
+
+            if (cliques_por_thread[outro_tid].size() < 2 * roubo_carga)
+                continue;
+
+            {
+                lock_guard<mutex> lock(mutexes[outro_tid]);  // bloqueia a outra thread
+                    {
+                        lock_guard<mutex> lock_roubo(mutexes[tid]);  // bloqueia a thread atual
+                        for (long unsigned int i = 0; i < roubo_carga && !cliques_por_thread[outro_tid].empty(); ++i) {
+                            cliques_por_thread[tid].push_back(cliques_por_thread[outro_tid].back());
+                            cliques_por_thread[outro_tid].pop_back();
+                        }
+                    }
+                    // cout << "Thread " << tid << " roubou de " << outro_tid << endl;
+                    return true;   
+            }
+        }
+        // cout << "Thread " << tid << " não conseguiu roubar" << endl;
+        return false;
+    };
+
+    for (unsigned int tid = 0; tid < num_threads; ++tid) {
+        threads.emplace_back([&, tid]() {
+            set<vector<int>> cliques;
+            cliques.insert(cliques_por_thread[tid].begin(), cliques_por_thread[tid].end());
+            int &count = contagens[tid];
+
+            while (!cliques.empty()) {
+                
+                vector<int> clique = *cliques.begin();
+                cliques.erase(cliques.begin());
+
+
                 int tamanho_clique = clique.size();
                 if (tamanho_clique == k) {
-                    local_count++;
+                    count++;
                     continue;
                 }
 
                 int ultimo_vertice = clique.back();
 
-                vector<vector<int>> novas_cliques;
+                for (int vertice : clique) {
+                    vector<int> vizinhos_atual = getNeighbours(vertice);
 
-                // Itera sobre os vizinhos do último vértice
-                vector<int> vizinhos_ultimo = getNeighbours(ultimo_vertice);
-
-                for (int vizinho : vizinhos_ultimo) {
-                    if (vizinho > ultimo_vertice && se_conecta_a_todos_os_vertices_da_clique(vizinho, clique)) {
-                        vector<int> nova_clique = clique;
-                        nova_clique.push_back(vizinho);
-                        novas_cliques.push_back(nova_clique);
-                    }
-                }
-
-                // Adiciona novas cliques à própria fila
-                omp_set_lock(&locks[tid]);
-                cliques_por_thread[tid].insert(cliques_por_thread[tid].end(), novas_cliques.begin(), novas_cliques.end());
-                omp_unset_lock(&locks[tid]);
-
-            } else {
-                // Tenta roubar de outras threads
-                bool roubou = false;
-
-                for (unsigned int offset = 1; offset < num_threads; ++offset) {
-                    unsigned int victim_tid = (tid + offset) % num_threads;
-
-                    // Evita roubar de si mesmo
-                    if (victim_tid == tid) continue;
-
-                    // Tenta adquirir o lock da thread vítima
-                    if (omp_test_lock(&locks[victim_tid])) {
-                        if (!cliques_por_thread[victim_tid].empty()) {
-                            // Rouba até 'roubo_carga' tarefas
-                            size_t steal_count = min(roubo_carga, cliques_por_thread[victim_tid].size());
-
-                            // Copia as últimas 'steal_count' tarefas
-                            vector<vector<int>> stolen_cliques(
-                                cliques_por_thread[victim_tid].end() - steal_count,
-                                cliques_por_thread[victim_tid].end());
-
-                            // Remove as tarefas roubadas da fila da vítima
-                            cliques_por_thread[victim_tid].erase(
-                                cliques_por_thread[victim_tid].end() - steal_count,
-                                cliques_por_thread[victim_tid].end());
-
-                            omp_unset_lock(&locks[victim_tid]);
-
-                            // Adiciona as tarefas roubadas à própria fila
-                            omp_set_lock(&locks[tid]);
-                            cliques_por_thread[tid].insert(
-                                cliques_por_thread[tid].end(),
-                                stolen_cliques.begin(),
-                                stolen_cliques.end());
-                            omp_unset_lock(&locks[tid]);
-
-                            roubou = true;
-                            break; // Sai do loop após roubar com sucesso
+                    for (int vizinho : vizinhos_atual) {
+                        if (vizinho > ultimo_vertice && formar_clique(vizinho, clique)) {
+                            vector<int> nova_clique = clique;
+                            nova_clique.push_back(vizinho);
+                            cliques.insert(nova_clique);
                         }
-                        omp_unset_lock(&locks[victim_tid]);
                     }
-                }
-
-                if (!roubou) {
-                    // Não conseguiu roubar de nenhuma thread, encerra
-                    break;
                 }
             }
-        }
-
-        // Atualiza a contagem global
-        contagens[tid] = local_count;
+            if(!roubar_cliques(tid)){
+                threads_trabalhando--;
+            }
+        });
     }
 
-    // Destrói os locks
-    for (unsigned int i = 0; i < num_threads; ++i) {
-        omp_destroy_lock(&locks[i]);
+    // espera por todas as threads terminarem
+    for (auto &th : threads) {
+        th.join();
     }
 
-    // Soma os resultados de todas as threads
+    // soma os resultados de todas as threads
     int total_count = 0;
     for (int c : contagens) {
         total_count += c;
@@ -296,6 +266,7 @@ int Graph::contagem_cliques_paralela_balanceada(int k, int n_threads, long unsig
 
     return total_count;
 }
+
 
 int main(int argc, char* argv[]) {
 
